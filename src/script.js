@@ -2,6 +2,28 @@ const darkModeIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="#ccc
 
 const lightModeIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="#333" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M12 1.25a.75.75 0 0 1 .75.75v1a.75.75 0 0 1-1.5 0V2a.75.75 0 0 1 .75-.75Z"/><path fill="currentColor" fill-rule="evenodd" d="M6.25 12a5.75 5.75 0 1 1 11.5 0a5.75 5.75 0 0 1-11.5 0ZM12 7.75a4.25 4.25 0 1 0 0 8.5a4.25 4.25 0 0 0 0-8.5Z" clip-rule="evenodd"/><path fill="currentColor" d="M5.46 4.399a.75.75 0 0 0-1.061 1.06l.707.707a.75.75 0 1 0 1.06-1.06l-.707-.707ZM22.75 12a.75.75 0 0 1-.75.75h-1a.75.75 0 0 1 0-1.5h1a.75.75 0 0 1 .75.75Zm-3.149-6.54a.75.75 0 1 0-1.06-1.061l-.707.707a.75.75 0 1 0 1.06 1.06l.707-.707ZM12 20.25a.75.75 0 0 1 .75.75v1a.75.75 0 0 1-1.5 0v-1a.75.75 0 0 1 .75-.75Zm6.894-2.416a.75.75 0 1 0-1.06 1.06l.707.707a.75.75 0 1 0 1.06-1.06l-.707-.707ZM3.75 12a.75.75 0 0 1-.75.75H2a.75.75 0 0 1 0-1.5h1a.75.75 0 0 1 .75.75Zm2.416 6.894a.75.75 0 0 0-1.06-1.06l-.707.707a.75.75 0 0 0 1.06 1.06l.707-.707Z"/></svg>`;
 
+const actions = {
+  punch: 2,
+  bend: 7,
+  upset: 13,
+  shrink: 16,
+  hit1: -3,
+  hit2: -6,
+  hit3: -9,
+  draw: -15
+};
+
+const actionNames = {
+  punch: "Punch (+2)",
+  bend: "Bend (+7)",
+  upset: "Upset (+13)",
+  shrink: "Shrink (+16)",
+  hit1: "Light Hit (-3)",
+  hit2: "Medium Hit (-6)",
+  hit3: "Heavy Hit (-9)",
+  draw: "Draw (-15)"
+};
+
 document.addEventListener('DOMContentLoaded', function() {
   initializeMode();
 
@@ -44,7 +66,12 @@ function updateModeIcon() {
 // Set dark mode as default and handle mode persistence
 function initializeMode() {
   const storedMode = localStorage.getItem('darkMode');
-  const darkModeEnabled = storedMode === null ? true : storedMode === 'true';
+  let darkModeEnabled;
+  if (storedMode === null) {
+    darkModeEnabled = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  } else {
+    darkModeEnabled = storedMode === 'true';
+  }
   const modeToggle = document.getElementById('mode-toggle-checkbox');
 
   if (darkModeEnabled) {
@@ -64,10 +91,9 @@ function initializeMode() {
 // Helper function to create an image element for a given action
 function createActionImage(action) {
   const img = document.createElement("img");
-  img.src = `../res/${action}.png`;  // Assuming all images are named after the action
+  img.src = `../res/${action}.png`;
   img.alt = action;
-  const capitalizedAction = action.charAt(0).toUpperCase() + action.slice(1);
-  img.title = capitalizedAction;
+  img.title = actionNames[action] || (action.charAt(0).toUpperCase() + action.slice(1));
   img.classList.add("result-icon");
   return img;
 }
@@ -76,17 +102,168 @@ function createActionImage(action) {
 function applyTooltipToIcon(iconElement) {
   const action = iconElement.getAttribute("data-action");
   if (action) {
-    const capitalizedAction = action.charAt(0).toUpperCase() + action.slice(1);
-    iconElement.title = capitalizedAction;
+    iconElement.title = actionNames[action] || (action.charAt(0).toUpperCase() + action.slice(1));
   } else if (action === "") {
     iconElement.title = "None";
   }
 }
 
-document.getElementById("calculate-button").addEventListener("click", function() {
-  const targetValue = parseInt(document.getElementById("target-value").value);
+function runBFS() {
+  const dist = Array(151).fill(Infinity);
+  const parent = Array(151).fill(null);
+  const parentAction = Array(151).fill(null);
 
-  // Collect and filter instructions
+  dist[0] = 0;
+  const queue = [0];
+
+  while (queue.length > 0) {
+    const u = queue.shift();
+    for (const action in actions) {
+      const val = actions[action];
+      const v = Math.max(0, Math.min(150, u + val));
+      if (dist[v] === Infinity) {
+        dist[v] = dist[u] + 1;
+        parent[v] = u;
+        parentAction[v] = action;
+        queue.push(v);
+      }
+    }
+  }
+  return { dist, parent, parentAction };
+}
+
+function getHitCombinations(instructions) {
+  const hitTiers = ["hit1", "hit2", "hit3"];
+  const results = [];
+
+  function generate(index, currentInstructions) {
+    if (index === instructions.length) {
+      results.push(currentInstructions);
+      return;
+    }
+
+    const instr = instructions[index];
+    if (instr.action === "hit") {
+      for (const tier of hitTiers) {
+        generate(index + 1, [
+          ...currentInstructions,
+          { ...instr, action: tier, originalIndex: index }
+        ]);
+      }
+    } else {
+      generate(index + 1, [
+        ...currentInstructions,
+        { ...instr, originalIndex: index }
+      ]);
+    }
+  }
+
+  generate(0, []);
+  return results;
+}
+
+function isValidPermutation(p) {
+  const n = p.length;
+  for (let i = 0; i < n; i++) {
+    const priority = p[i].priority;
+    if (priority === 'last' && i !== n - 1) return false;
+    if (priority === 'second-last' && i !== n - 2) return false;
+    if (priority === 'third-last' && i !== n - 3) return false;
+    if (priority === 'not-last' && i === n - 1) return false;
+  }
+  return true;
+}
+
+function simulateFinalPath(preTargetValue, sortedInstructions) {
+  let val = preTargetValue;
+  for (const instr of sortedInstructions) {
+    val = Math.max(0, Math.min(150, val + actions[instr.action]));
+  }
+  return val;
+}
+
+function calculateSetupActions(targetValue, instructions) {
+  const bfsResult = runBFS();
+  const combinations = getHitCombinations(instructions);
+  
+  let bestCombination = null;
+  let bestSetupActions = null;
+  let minSetupLength = Infinity;
+  let bestVs = null;
+
+  for (const comb of combinations) {
+    const sorted = sortInstructions(comb);
+    if (!isValidPermutation(sorted)) continue;
+
+    for (let Vs = 0; Vs <= 150; Vs++) {
+      if (bfsResult.dist[Vs] === Infinity) continue;
+      if (simulateFinalPath(Vs, sorted) === targetValue) {
+        if (bfsResult.dist[Vs] < minSetupLength) {
+          minSetupLength = bfsResult.dist[Vs];
+          bestVs = Vs;
+          bestCombination = sorted;
+        }
+      }
+    }
+  }
+
+  if (bestCombination !== null && bestVs !== null) {
+    const path = [];
+    let curr = bestVs;
+    while (curr !== 0) {
+      path.push(bfsResult.parentAction[curr]);
+      curr = bfsResult.parent[curr];
+    }
+    path.reverse();
+
+    for (const resolvedInstr of bestCombination) {
+      instructions[resolvedInstr.originalIndex].action = resolvedInstr.action;
+    }
+    return path;
+  }
+
+  return null;
+}
+
+function sortInstructions(instructions) {
+  const last = instructions.filter(i => i.priority === 'last');
+  const secondLast = instructions.filter(i => i.priority === 'second-last');
+  const thirdLast = instructions.filter(i => i.priority === 'third-last');
+  const notLast = instructions.filter(i => i.priority === 'not-last');
+  const anyPriority = instructions.filter(i => i.priority === 'any');
+
+  let sortedInstructions = [...thirdLast, ...secondLast, ...notLast, ...last];
+
+  if (anyPriority.length > 0) {
+    const anyHits = anyPriority.map(i => i);
+
+    let insertionPoint = 0;
+    if (last.length > 0 && secondLast.length > 0) {
+      insertionPoint = sortedInstructions.length - last.length - secondLast.length;
+    } else if (last.length > 0) {
+      insertionPoint = sortedInstructions.length - last.length;
+    } else {
+      insertionPoint = sortedInstructions.length;
+    }
+
+    sortedInstructions.splice(insertionPoint, 0, ...anyHits);
+  }
+
+  return sortedInstructions;
+}
+
+function calculate() {
+  const targetValueVal = document.getElementById("target-value").value;
+  if (!targetValueVal) {
+    document.getElementById("result").classList.remove("visible");
+    return;
+  }
+  const targetValue = parseInt(targetValueVal);
+  if (isNaN(targetValue)) {
+    document.getElementById("result").classList.remove("visible");
+    return;
+  }
+
   const instructions = [];
   document.querySelectorAll("[class^='instruction-set']").forEach((set) => {
     const actionElement = set.querySelector(".action-icon");
@@ -97,165 +274,82 @@ document.getElementById("calculate-button").addEventListener("click", function()
     }
   });
 
-  // Action values
-  const actions = {
-    punch: 2,
-    bend: 7,
-    upset: 13,
-    shrink: 16,
-    hit1: -3,
-    hit2: -6,
-    hit3: -9,
-    draw: -15
-  };
-
-  function selectBestHit(preTargetValue, remainingHits) {
-    let bestHitAction = null;
-    let minActions = Infinity;
-
-    remainingHits.forEach(hit => {
-      const hitValue = actions[hit];
-      const actionsNeeded = Math.ceil(preTargetValue / hitValue);
-      if (actionsNeeded < minActions && (preTargetValue % hitValue === 0 || preTargetValue + hitValue <= targetValue)) {
-        minActions = actionsNeeded;
-        bestHitAction = hit;
-      }
-    });
-
-    return bestHitAction;
-  }
-
-  function calculateSetupActions(targetValue, instructions) {
-    let instructionSum = 0;
-    instructions.forEach(instr => {
-      if (instr.action === "hit") {
-        const bestHit = selectBestHit(targetValue - instructionSum, ["hit1", "hit2", "hit3"]);
-        instructionSum += actions[bestHit];
-        instr.action = bestHit;
-      } else {
-        instructionSum += actions[instr.action];
-      }
-    });
-
-    let preTargetValue = targetValue - instructionSum;
-    const dp = Array(preTargetValue + 1).fill(Infinity);
-    dp[0] = 0;
-
-    for (let i = 0; i <= preTargetValue; i++) {
-      if (dp[i] !== Infinity) {
-        for (let action in actions) {
-          let nextValue = i + actions[action];
-          if (nextValue <= preTargetValue) {
-            dp[nextValue] = Math.min(dp[nextValue], dp[i] + 1);
-          }
-        }
-      }
-    }
-
-    let setupActions = [];
-    let currentValue = preTargetValue;
-
-    while (currentValue > 0) {
-      for (let action in actions) {
-        let prevValue = currentValue - actions[action];
-        if (prevValue >= 0 && dp[prevValue] === dp[currentValue] - 1) {
-          setupActions.push(action);
-          currentValue = prevValue;
-          break;
-        }
-      }
-    }
-
-    setupActions.reverse();
-
-    return setupActions;
-  }
-
-  function sortInstructions(instructions) {
-    const last = instructions.filter(i => i.priority === 'last');
-    const secondLast = instructions.filter(i => i.priority === 'second-last');
-    const thirdLast = instructions.filter(i => i.priority === 'third-last');
-    const notLast = instructions.filter(i => i.priority === 'not-last');
-    const anyPriority = instructions.filter(i => i.priority === 'any');
-
-    let sortedInstructions = [...thirdLast, ...secondLast, ...notLast, ...last];
-
-    if (anyPriority.length > 0) {
-      const anyHits = anyPriority.map(i => i);
-
-      let insertionPoint = 0;
-      if (last.length > 0 && secondLast.length > 0) {
-        insertionPoint = sortedInstructions.length - last.length - secondLast.length;
-      } else if (last.length > 0) {
-        insertionPoint = sortedInstructions.length - last.length;
-      } else {
-        insertionPoint = sortedInstructions.length;
-      }
-
-      sortedInstructions.splice(insertionPoint, 0, ...anyHits);
-    }
-
-    return sortedInstructions;
-  }
-
   const setupActions = calculateSetupActions(targetValue, instructions);
   const sortedInstructions = sortInstructions(instructions);
 
-  // Display results as images
   const setupContainer = document.getElementById("setup-actions");
   const finalContainer = document.getElementById("final-actions");
 
-  // Clear previous results
   setupContainer.innerHTML = "";
   finalContainer.innerHTML = "";
 
-  // Append setup actions as images
-  setupActions.forEach(action => {
-    setupContainer.appendChild(createActionImage(action));
-  });
+  if (setupActions === null) {
+    setupContainer.textContent = "No valid path found (values must stay in 0-150 range).";
+  } else {
+    setupActions.forEach(action => {
+      setupContainer.appendChild(createActionImage(action));
+    });
+  }
 
-  // Append final instructions as images
   sortedInstructions.forEach(instr => {
     finalContainer.appendChild(createActionImage(instr.action));
   });
 
-  // Show the result card with a transition
   const resultCard = document.getElementById("result");
   resultCard.classList.add("visible");
-});
+}
 
 // Single function to manage icon selection
 function setupInstructionListener(selector) {
-  const icon = document.querySelector(selector + ' .action-icon');
+  const setElement = document.querySelector(selector);
+  const icon = setElement.querySelector('.action-icon');
   const container = document.querySelector('.container');
   const popup = document.getElementById('action-popup');
   const popupContent = document.querySelector('.action-popup-content');
   const header = document.querySelector('.app-header');
 
+  const clearBtn = setElement.querySelector('.clear-btn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function() {
+      icon.src = '../res/empty.png';
+      icon.setAttribute('data-action', '');
+      icon.title = 'None';
+      const prioritySelect = setElement.querySelector('.priority');
+      if (prioritySelect) {
+        prioritySelect.selectedIndex = 0;
+      }
+      document.getElementById('result').classList.remove('visible');
+      document.getElementById('setup-actions').innerHTML = '';
+      document.getElementById('final-actions').innerHTML = '';
+      calculate();
+    });
+  }
+
+  const prioritySelect = setElement.querySelector('.priority');
+  if (prioritySelect) {
+    prioritySelect.addEventListener('change', calculate);
+  }
 
   icon.addEventListener('click', function() {
     const currentIcon = this;
     popup.classList.remove('hidden');
     container.classList.add('blurred');
 
-    // Remove all existing listeners on popup icons
     document.querySelectorAll('.popup-action-icon').forEach(popupIcon => {
       popupIcon.onclick = null;
     });
 
-    // Add listener to popup icons for the current selection
     document.querySelectorAll('.popup-action-icon').forEach(popupIcon => {
-      // Apply tooltip to each popup icon
       applyTooltipToIcon(popupIcon);
 
       popupIcon.onclick = function() {
         currentIcon.src = this.src;
         currentIcon.setAttribute('data-action', this.getAttribute('data-action'));
         closePopup();
+        calculate();
       };
     });
 
-    // Close popup when clicking outside of it
     function handleOutsideClick(event) {
       if (!popupContent.contains(event.target) &&
           !icon.contains(event.target) &&
@@ -275,7 +369,6 @@ function setupInstructionListener(selector) {
     document.getElementById('close-popup').onclick = closePopup;
   });
 
-  // Apply tooltip to the instruction set icon on load
   applyTooltipToIcon(icon);
 }
 
@@ -320,6 +413,9 @@ window.addEventListener('load', resetPage);
 setupInstructionListener('.instruction-set-1');
 setupInstructionListener('.instruction-set-2');
 setupInstructionListener('.instruction-set-3');
+
+document.getElementById("target-value").addEventListener("input", calculate);
+document.getElementById("calculate-button").addEventListener("click", calculate);
 
 
 

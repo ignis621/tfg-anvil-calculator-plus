@@ -1,14 +1,15 @@
-# TFG Anvil Calculator
+<img src="icon.png" alt="TFG Anvil Calculator Plus" title="TFG Anvil Calculator Plus" align="left" height="60px"/>
 
-Welcome to the TFG Anvil Calculator! This tool helps you determine the most efficient sequence of smithing actions 
-to always get a perfectly forged item in the TerraFirmaGreg modpack.
+# TFG Anvil Calculator Plus
 
-Link to the tool: https://adrianmiller99.github.io/tfg-anvil-calculator/src/index.html
+Welcome to the TFG Anvil Calculator Plus! This tool helps you determine the most efficient sequence of smithing actions to always get a perfectly forged item in the TerraFirmaGreg modpack.
+
+Link to the tool: https://ignis621.github.io/tfg-anvil-calculator-plus/src/index.html
+
+This is a fork of [tfg-anvil-calculator](https://github.com/AdrianMiller99/tfg-anvil-calculator) by AdrianMiller99. Changes are outlined in [Changes in this fork](#changes-in-this-fork).
 
 
 ## How to Use
-
-
 
 ### 1. Choose Smithing Instructions
 Select up to three smithing instructions from the provided options:
@@ -21,7 +22,6 @@ Select up to three smithing instructions from the provided options:
 - **None** (if fewer than three instructions are needed)
 
 For each instruction, assign a priority (Last, Second Last, Third Last, Not Last, Any).
-
 
 **Make sure that the instructions and their priorities are matching those of the in-game anvil GUI.**
 
@@ -46,12 +46,20 @@ the order shown on the calculator (left to right, top to bottom), you should hav
 ### 4. Switch Between Light and Dark Modes
 Use the toggle switch in the top right corner to switch between light and dark modes according to your preference.
 
-## Support
-If you encounter any issues or have suggestions for improvements, 
-feel free to open an issue on the [GitHub repository](https://github.com/AdrianMiller99/tfg-anvil-calculator/issues/new/choose).
+## Changes in this Fork
 
-If you feel like this tool has helped you and you want to support me, 
-you can do so by buying me a coffee on [Ko-fi](https://ko-fi.com/adrianmiller99) or by simply giving the repository a star.
+This fork introduces improvements and changes:
+
+* Replaced the original heuristic-based best hit selector with a Breadth-First Search (BFS) pathfinder. This ensures that the calculator always finds the most optimal solution.
+* Added the anvil's `0–150` slider clamping for edge cases
+* Improved rule validation
+* The calculator computes and displays the results in real-time as you type the target value, adjust instruction dropdowns, pick actions, or clear rows
+* Result icons now fade in when calculated to indicate changes
+* Setup and final action icons display tooltips showing their name and numerical impact (`Punch (+2)`, `Light Hit (-3)` etc) on hover
+* Added a clear button next to each instruction set row to easily reset individual rules
+
+## Support
+If you encounter any issues or have suggestions for improvements, feel free to [open an issue](https://github.com/ignis621/tfg-anvil-calculator-plus/issues/new/choose) on this repository.
 
 # License
 This project is licensed under the European Union Public Licence (EUPL) 1.2. See the LICENSE file for details.
