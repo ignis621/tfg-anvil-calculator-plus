@@ -22,38 +22,9 @@ const actionNames = {
   hit1: "Light Hit (-3)",
   hit2: "Medium Hit (-6)",
   hit3: "Heavy Hit (-9)",
-  draw: "Draw (-15)"
+  draw: "Draw (-15)",
+  empty: "None"
 };
-
-const defaultPresets = [
-  {
-    name: "Pickaxe Head (TFC)",
-    target: 100,
-    instructions: [
-      { action: "punch", priority: "third-last" },
-      { action: "bend", priority: "second-last" },
-      { action: "draw", priority: "last" }
-    ]
-  },
-  {
-    name: "Sword Blade (TFC)",
-    target: 100,
-    instructions: [
-      { action: "hit", priority: "not-last" },
-      { action: "hit", priority: "second-last" },
-      { action: "draw", priority: "last" }
-    ]
-  },
-  {
-    name: "Shovel Head (TFC)",
-    target: 100,
-    instructions: [
-      { action: "hit", priority: "third-last" },
-      { action: "hit", priority: "second-last" },
-      { action: "punch", priority: "last" }
-    ]
-  }
-];
 
 document.addEventListener('DOMContentLoaded', function() {
   initializeMode();
@@ -78,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
   updateAllIconSources();
 });
 
-// Event listener for the dark mode toggle switch
+// event listener for the dark mode toggle switch
 document.getElementById('mode-toggle-checkbox').addEventListener('change', function () {
   if (this.checked) {
     document.body.classList.remove('light-mode');
@@ -94,14 +65,14 @@ document.getElementById('mode-toggle-checkbox').addEventListener('change', funct
   updateModeIcon();
 });
 
-// Function to update the mode icon
+// function to update the mode icon
 function updateModeIcon() {
   const isDarkMode = document.body.classList.contains('dark-mode');
   const modeIcon = document.getElementById('mode-icon');
   modeIcon.innerHTML = isDarkMode ? darkModeIcon : lightModeIcon;
 }
 
-// Set dark mode as default and handle mode persistence
+// set dark mode as default and handle mode persistence
 function initializeMode() {
   const storedMode = localStorage.getItem('darkMode');
   let darkModeEnabled;
@@ -136,7 +107,7 @@ function createActionImage(action) {
   return img;
 }
 
-// Function to apply tooltips to existing action icons in the instruction set and popup
+// function to apply tooltips to existing action icons in the instruction set and popup
 function applyTooltipToIcon(iconElement) {
   const action = iconElement.getAttribute("data-action");
   if (action) {
@@ -389,7 +360,7 @@ function calculate() {
   resultCard.classList.add("visible");
 }
 
-// Single function to manage icon selection
+// single function to manage icon selection
 function setupInstructionListener(selector) {
   const setElement = document.querySelector(selector);
   const icon = setElement.querySelector('.action-icon');
@@ -510,10 +481,10 @@ function updateGitHubIconColor(isDarkMode) {
   }
 }
 
-// Call resetPage on window load
+// call resetpage on window load
 window.addEventListener('load', resetPage);
 
-// Apply listeners to each instruction set
+// apply listeners to each instruction set
 setupInstructionListener('.instruction-set-1');
 setupInstructionListener('.instruction-set-2');
 setupInstructionListener('.instruction-set-3');
@@ -523,8 +494,16 @@ document.getElementById("calculate-button").addEventListener("click", calculate)
 
 // bookmarks logic
 function initBookmarks() {
-  if (localStorage.getItem('anvil_bookmarks') === null) {
-    localStorage.setItem('anvil_bookmarks', JSON.stringify(defaultPresets));
+  let bookmarks = JSON.parse(localStorage.getItem('anvil_bookmarks') || '[]');
+  
+  // remove old default presets if present
+  const defaultNames = ["Pickaxe Head (TFC)", "Sword Blade (TFC)", "Shovel Head (TFC)"];
+  const beforeLength = bookmarks.length;
+  bookmarks = bookmarks.filter(b => !defaultNames.includes(b.name));
+  
+  // if we removed default presets or if localstorage was empty, save the updated list
+  if (bookmarks.length !== beforeLength || localStorage.getItem('anvil_bookmarks') === null) {
+    localStorage.setItem('anvil_bookmarks', JSON.stringify(bookmarks));
   }
   
   // set event listeners for bookmark saving
