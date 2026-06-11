@@ -114,34 +114,29 @@ body {
   color: #0090e0;
 }
 
-.github-link-container {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+/* header layout and theme switcher */
+.logo-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.github-link {
+.github-link-small {
   display: flex;
   justify-content: center;
   align-items: center;
-}
-
-.github-link a {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background-color: transparent;
   transition: background-color 0.3s ease;
 }
 
-.github-link a:hover {
-  background-color: rgba(0, 0, 0, 0.1);
+.github-link-small:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
-.dark-mode .github-link a:hover {
+.dark-mode .github-link-small:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -157,11 +152,54 @@ body {
   fill: #ffffff;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.theme-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #888;
+}
+
+.light-mode .theme-label {
+  color: #666;
+}
+
+.theme-dropdown {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.light-mode .theme-dropdown {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.theme-dropdown:focus {
+  border-color: #0090e0;
+  box-shadow: 0 0 6px rgba(0, 144, 224, 0.3);
+}
+
 .mode-toggle {
   display: flex;
   align-items: center;
-  flex: 1;
-  justify-content: flex-end;
 }
 
 #mode-icon {
@@ -409,8 +447,299 @@ input:checked + .slider:before {
   transform: translateX(14px);
 }
 
+/* split container for instructions and bookmarks */
+.split-container {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+  align-items: stretch;
+}
+
+.instructions-left {
+  flex: 1.2;
+  display: flex;
+  flex-direction: column;
+}
+
+.instruction-sets-container {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.split-divider {
+  width: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+  align-self: stretch;
+}
+
+.light-mode .split-divider {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.instructions-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* warning banner and input highlights */
+.warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background-color: rgba(255, 153, 0, 0.15);
+  border: 1px solid rgba(255, 153, 0, 0.35);
+  color: #ffb74d;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  line-height: 1.4;
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+.light-mode .warning-banner {
+  background-color: rgba(255, 128, 0, 0.08);
+  border: 1px solid rgba(255, 128, 0, 0.25);
+  color: #c95100;
+}
+
+.warning-banner.hidden {
+  display: none;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.warning-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.warning-msg {
+  flex: 1;
+}
+
+.warning-input {
+  border-color: #ff9900 !important;
+  box-shadow: 0 0 8px rgba(255, 153, 0, 0.5) !important;
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* bookmark ui styling */
+.bookmark-input-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.bookmark-input-group .input-field {
+  flex: 1;
+  margin-top: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.light-mode .bookmark-input-group .input-field {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.bookmark-input-group .input-field:focus {
+  border-color: #0090e0;
+  box-shadow: 0 0 8px rgba(0, 144, 224, 0.4);
+  outline: none;
+}
+
+.bookmark-input-group button {
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.bookmarks-list {
+  max-height: 250px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 5px;
+}
+
+/* scrollbar styling */
+.bookmarks-list::-webkit-scrollbar {
+  width: 6px;
+}
+.bookmarks-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.bookmarks-list::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+.light-mode .bookmarks-list::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+.bookmark-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.light-mode .bookmark-item {
+  background-color: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.bookmark-item:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.light-mode .bookmark-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.bookmark-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0; /* prevents overflow */
+}
+
+.bookmark-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookmark-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #aaa;
+}
+
+.light-mode .bookmark-details {
+  color: #666;
+}
+
+.bookmark-preview-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bookmark-preview-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 1px;
+}
+
+.light-mode .bookmark-preview-icon {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.bookmark-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.bookmark-actions button {
+  margin: 0 0 0 10px;
+  font-weight: 500;
+}
+
+.bookmark-delete-btn {
+  background-color: #dc3545 !important;
+  color: white;
+}
+
+.bookmark-delete-btn:hover {
+  background-color: #c82333 !important;
+}
+
+.dark-mode .bookmark-delete-btn {
+  background-color: #e54949 !important;
+}
+
+.dark-mode .bookmark-delete-btn:hover {
+  background-color: #c43232 !important;
+}
+
+/* error message styling */
+#no-path-error {
+  color: #ff4d4d;
+  font-weight: 500;
+  margin-top: 10px;
+}
+
+.light-mode #no-path-error {
+  color: #d32f2f;
+}
+
+/* generic helper classes */
+.hidden {
+  display: none !important;
+}
+
 /* Media query for mobile devices */
 @media (max-width: 768px) {
+  .split-container {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .split-divider {
+    width: 100%;
+    height: 1px;
+    margin: 10px 0;
+  }
+
+  .instructions-left, .instructions-right {
+    flex: none;
+    width: 100%;
+  }
+
   #action-popup {
     width: 80%;
     max-width: 80%;
@@ -423,19 +752,32 @@ input:checked + .slider:before {
     position: relative;  /* Remove sticky positioning for mobile */
   }
 
-  .app-header .logo {
-    font-size: 24px;
+  .logo-group {
     flex: none;
     width: 100%;
-    text-align: center;
+    justify-content: center;
     margin-bottom: 10px;
   }
 
-  .mode-toggle {
+  .app-header .logo {
+    font-size: 24px;
+    margin-bottom: 0;
+  }
+
+  .github-link-small {
+    margin-left: 0;
+  }
+
+  .header-controls {
     flex: none;
     width: 100%;
     justify-content: center;
     margin-top: 10px;
+    gap: 15px;
+  }
+
+  .mode-toggle {
+    margin-top: 0;
   }
 
   #mode-icon {
@@ -445,12 +787,6 @@ input:checked + .slider:before {
 
   .switch {
     margin-left: 4px;
-  }
-
-  .github-link-container {
-    position: static;
-    transform: none;
-    margin: 10px 0;
   }
 }
 

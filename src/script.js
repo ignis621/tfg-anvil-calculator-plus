@@ -18,17 +18,49 @@ const actionNames = {
   bend: "Bend (+7)",
   upset: "Upset (+13)",
   shrink: "Shrink (+16)",
+  hit: "Hit (-3 / -6 / -9)",
   hit1: "Light Hit (-3)",
   hit2: "Medium Hit (-6)",
   hit3: "Heavy Hit (-9)",
   draw: "Draw (-15)"
 };
 
+const defaultPresets = [
+  {
+    name: "Pickaxe Head (TFC)",
+    target: 100,
+    instructions: [
+      { action: "punch", priority: "third-last" },
+      { action: "bend", priority: "second-last" },
+      { action: "draw", priority: "last" }
+    ]
+  },
+  {
+    name: "Sword Blade (TFC)",
+    target: 100,
+    instructions: [
+      { action: "hit", priority: "not-last" },
+      { action: "hit", priority: "second-last" },
+      { action: "draw", priority: "last" }
+    ]
+  },
+  {
+    name: "Shovel Head (TFC)",
+    target: 100,
+    instructions: [
+      { action: "hit", priority: "third-last" },
+      { action: "hit", priority: "second-last" },
+      { action: "punch", priority: "last" }
+    ]
+  }
+];
+
 document.addEventListener('DOMContentLoaded', function() {
   initializeMode();
+  initializeTheme();
 
   document.querySelectorAll('.action-icon').forEach(icon => {
-    icon.src = '../res/empty.png';
+    icon.src = `../res/${getTheme()}/empty.png`;
     icon.setAttribute('data-action', '');
   });
 
@@ -38,6 +70,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.getElementById('target-value').value = '';
   document.getElementById('result').classList.remove('visible');
+  
+  // initialize bookmarks
+  initBookmarks();
+  
+  // ensure all icon paths are updated to the correct theme
+  updateAllIconSources();
 });
 
 // Event listener for the dark mode toggle switch
@@ -88,10 +126,10 @@ function initializeMode() {
   updateModeIcon();
 }
 
-// Helper function to create an image element for a given action
+// helper function to create an image element for a given action
 function createActionImage(action) {
   const img = document.createElement("img");
-  img.src = `../res/${action}.png`;
+  img.src = `../res/${getTheme()}/${action}.png`;
   img.alt = action;
   img.title = actionNames[action] || (action.charAt(0).toUpperCase() + action.slice(1));
   img.classList.add("result-icon");
@@ -252,9 +290,49 @@ function sortInstructions(instructions) {
   return sortedInstructions;
 }
 
+function checkDuplicatePriorities() {
+  const prioritySelects = document.querySelectorAll('.priority');
+  const warningBanner = document.getElementById('priority-warning');
+  
+  if (!warningBanner) return false;
+  
+  // clear previous warnings
+  warningBanner.classList.add('hidden');
+  prioritySelects.forEach(select => select.classList.remove('warning-input'));
+  
+  // count priorities
+  const priorityCounts = {};
+  const uniquePriorities = ['last', 'second-last', 'third-last'];
+  
+  prioritySelects.forEach(select => {
+    const val = select.value;
+    if (uniquePriorities.includes(val)) {
+      priorityCounts[val] = (priorityCounts[val] || 0) + 1;
+    }
+  });
+  
+  let hasDuplicates = false;
+  // mark duplicate select elements
+  prioritySelects.forEach(select => {
+    const val = select.value;
+    if (uniquePriorities.includes(val) && priorityCounts[val] > 1) {
+      select.classList.add('warning-input');
+      hasDuplicates = true;
+    }
+  });
+  
+  if (hasDuplicates) {
+    warningBanner.classList.remove('hidden');
+  }
+  
+  return hasDuplicates;
+}
+
 function calculate() {
+  const hasDuplicates = checkDuplicatePriorities();
+
   const targetValueVal = document.getElementById("target-value").value;
-  if (!targetValueVal) {
+  if (!targetValueVal || hasDuplicates) {
     document.getElementById("result").classList.remove("visible");
     return;
   }
@@ -279,21 +357,33 @@ function calculate() {
 
   const setupContainer = document.getElementById("setup-actions");
   const finalContainer = document.getElementById("final-actions");
+  
+  const setupDiv = document.querySelector(".setup");
+  const finalDiv = document.querySelector(".final-instructions");
+  const errorDiv = document.getElementById("no-path-error");
 
   setupContainer.innerHTML = "";
   finalContainer.innerHTML = "";
 
   if (setupActions === null) {
-    setupContainer.textContent = "No valid path found (values must stay in 0-150 range).";
+    if (setupDiv) setupDiv.classList.add("hidden");
+    if (finalDiv) finalDiv.classList.add("hidden");
+    if (errorDiv) {
+      errorDiv.classList.remove("hidden");
+    }
   } else {
+    if (setupDiv) setupDiv.classList.remove("hidden");
+    if (finalDiv) finalDiv.classList.remove("hidden");
+    if (errorDiv) errorDiv.classList.add("hidden");
+
     setupActions.forEach(action => {
       setupContainer.appendChild(createActionImage(action));
     });
-  }
 
-  sortedInstructions.forEach(instr => {
-    finalContainer.appendChild(createActionImage(instr.action));
-  });
+    sortedInstructions.forEach(instr => {
+      finalContainer.appendChild(createActionImage(instr.action));
+    });
+  }
 
   const resultCard = document.getElementById("result");
   resultCard.classList.add("visible");
@@ -311,7 +401,7 @@ function setupInstructionListener(selector) {
   const clearBtn = setElement.querySelector('.clear-btn');
   if (clearBtn) {
     clearBtn.addEventListener('click', function() {
-      icon.src = '../res/empty.png';
+      icon.src = `../res/${getTheme()}/empty.png`;
       icon.setAttribute('data-action', '');
       icon.title = 'None';
       const prioritySelect = setElement.querySelector('.priority');
@@ -345,6 +435,7 @@ function setupInstructionListener(selector) {
       popupIcon.onclick = function() {
         currentIcon.src = this.src;
         currentIcon.setAttribute('data-action', this.getAttribute('data-action'));
+        applyTooltipToIcon(currentIcon); // fix tooltip on selection
         closePopup();
         calculate();
       };
@@ -372,29 +463,42 @@ function setupInstructionListener(selector) {
   applyTooltipToIcon(icon);
 }
 
-// Function to reset all inputs and selections
+// function to reset all inputs and selections
 function resetPage() {
-  // Reset target value input
+  // reset target value input
   document.getElementById('target-value').value = '';
 
-  // Reset instruction sets
+  // reset preset name input
+  const nameInput = document.getElementById('bookmark-name');
+  if (nameInput) {
+    nameInput.value = '';
+  }
+
+  // hide priority warning
+  const warningBanner = document.getElementById('priority-warning');
+  if (warningBanner) {
+    warningBanner.classList.add('hidden');
+  }
+
+  // reset instruction sets
   document.querySelectorAll('.instruction-set').forEach(set => {
     const actionIcon = set.querySelector('.action-icon');
-    actionIcon.src = '../res/empty.png';
+    actionIcon.src = `../res/${getTheme()}/empty.png`;
     actionIcon.setAttribute('data-action', '');
     actionIcon.title = 'None';
 
     const prioritySelect = set.querySelector('.priority');
     if (prioritySelect) {
       prioritySelect.selectedIndex = 0;
+      prioritySelect.classList.remove('warning-input');
     }
   });
 
-  // Hide result card
+  // hide result card
   const resultCard = document.getElementById('result');
   resultCard.classList.remove('visible');
 
-  // Clear setup and final actions
+  // clear setup and final actions
   document.getElementById('setup-actions').innerHTML = '';
   document.getElementById('final-actions').innerHTML = '';
 }
@@ -416,6 +520,231 @@ setupInstructionListener('.instruction-set-3');
 
 document.getElementById("target-value").addEventListener("input", calculate);
 document.getElementById("calculate-button").addEventListener("click", calculate);
+
+// bookmarks logic
+function initBookmarks() {
+  if (localStorage.getItem('anvil_bookmarks') === null) {
+    localStorage.setItem('anvil_bookmarks', JSON.stringify(defaultPresets));
+  }
+  
+  // set event listeners for bookmark saving
+  const saveBtn = document.getElementById('save-bookmark-btn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveCurrentBookmark);
+  }
+  
+  const nameInput = document.getElementById('bookmark-name');
+  if (nameInput) {
+    nameInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        saveCurrentBookmark();
+      }
+    });
+  }
+  
+  renderBookmarks();
+}
+
+function renderBookmarks() {
+  const listContainer = document.getElementById('bookmarks-list');
+  if (!listContainer) return;
+  listContainer.innerHTML = '';
+  
+  const bookmarks = JSON.parse(localStorage.getItem('anvil_bookmarks') || '[]');
+  
+  bookmarks.forEach(bm => {
+    const item = document.createElement('div');
+    item.className = 'bookmark-item';
+    
+    // create preview icons html
+    let iconsHtml = '';
+    bm.instructions.forEach(ins => {
+      const action = ins.action || 'empty';
+      const priority = ins.priority || 'none';
+      const title = `${actionNames[action] || action || 'None'} (${priority})`;
+      iconsHtml += `<img src="../res/${getTheme()}/${action}.png" class="bookmark-preview-icon" title="${title}" alt="${action}">`;
+    });
+    
+    item.innerHTML = `
+      <div class="bookmark-info">
+        <div class="bookmark-title" title="${bm.name}">${bm.name}</div>
+        <div class="bookmark-details">
+          <span>Target: ${bm.target || 'None'}</span>
+          <div class="bookmark-preview-icons">
+            ${iconsHtml}
+          </div>
+        </div>
+      </div>
+      <div class="bookmark-actions">
+        <button class="bookmark-load-btn">Load</button>
+        <button class="bookmark-delete-btn" title="Delete preset">X</button>
+      </div>
+    `;
+    
+    // attach load click listener to the load button only
+    const loadBtn = item.querySelector('.bookmark-load-btn');
+    if (loadBtn) {
+      loadBtn.addEventListener('click', () => {
+        loadBookmark(bm.name, item);
+      });
+    }
+    
+    // handle delete button click
+    const deleteBtn = item.querySelector('.bookmark-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        deleteBookmark(bm.name);
+      });
+    }
+    
+    listContainer.appendChild(item);
+  });
+}
+
+function loadBookmark(name, elementToFlash) {
+  const bookmarks = JSON.parse(localStorage.getItem('anvil_bookmarks') || '[]');
+  const bm = bookmarks.find(b => b.name === name);
+  if (!bm) return;
+  
+  // load target value
+  document.getElementById('target-value').value = bm.target || '';
+  
+  // load each slot
+  bm.instructions.forEach((ins, idx) => {
+    const setSelector = `.instruction-set-${idx + 1}`;
+    const setElement = document.querySelector(setSelector);
+    if (!setElement) return;
+    
+    const icon = setElement.querySelector('.action-icon');
+    const prioritySelect = setElement.querySelector('.priority');
+    
+    const action = ins.action || '';
+    icon.src = `../res/${getTheme()}/${action || 'empty'}.png`;
+    icon.setAttribute('data-action', action);
+    applyTooltipToIcon(icon);
+    
+    if (prioritySelect) {
+      prioritySelect.value = ins.priority || '';
+    }
+  });
+  
+  // perform calculation
+  calculate();
+  
+  // flash element if provided
+  if (elementToFlash) {
+    elementToFlash.classList.add('flash-loaded');
+    setTimeout(() => {
+      elementToFlash.classList.remove('flash-loaded');
+    }, 800);
+  }
+}
+
+function saveCurrentBookmark() {
+  const nameInput = document.getElementById('bookmark-name');
+  const name = nameInput.value.trim();
+  
+  if (!name) {
+    nameInput.focus();
+    nameInput.placeholder = "Please enter a name first!";
+    nameInput.classList.add('warning-input');
+    setTimeout(() => {
+      nameInput.classList.remove('warning-input');
+      nameInput.placeholder = "Preset name (e.g. Iron Pickaxe)";
+    }, 2000);
+    return;
+  }
+  
+  const targetVal = document.getElementById('target-value').value;
+  const target = targetVal ? parseInt(targetVal) : '';
+  
+  const instructions = [];
+  for (let i = 1; i <= 3; i++) {
+    const setElement = document.querySelector(`.instruction-set-${i}`);
+    if (setElement) {
+      const actionIcon = setElement.querySelector('.action-icon');
+      const action = actionIcon.getAttribute('data-action') || '';
+      const priority = setElement.querySelector('.priority').value || '';
+      instructions.push({ action, priority });
+    }
+  }
+  
+  const bookmarks = JSON.parse(localStorage.getItem('anvil_bookmarks') || '[]');
+  const existingIdx = bookmarks.findIndex(b => b.name.toLowerCase() === name.toLowerCase());
+  
+  const newBookmark = { name, target, instructions };
+  
+  if (existingIdx !== -1) {
+    bookmarks[existingIdx] = newBookmark;
+  } else {
+    bookmarks.push(newBookmark);
+  }
+  
+  localStorage.setItem('anvil_bookmarks', JSON.stringify(bookmarks));
+  nameInput.value = '';
+  renderBookmarks();
+  
+  // highlight the newly saved bookmark
+  setTimeout(() => {
+    const items = document.querySelectorAll('.bookmark-item');
+    items.forEach(item => {
+      const title = item.querySelector('.bookmark-title').textContent;
+      if (title === name) {
+        item.classList.add('flash-loaded');
+        setTimeout(() => item.classList.remove('flash-loaded'), 800);
+      }
+    });
+  }, 50);
+}
+
+function deleteBookmark(name) {
+  let bookmarks = JSON.parse(localStorage.getItem('anvil_bookmarks') || '[]');
+  bookmarks = bookmarks.filter(b => b.name !== name);
+  localStorage.setItem('anvil_bookmarks', JSON.stringify(bookmarks));
+  renderBookmarks();
+}
+
+// get current icon theme
+function getTheme() {
+  const themeSelect = document.getElementById('theme-select');
+  return themeSelect ? themeSelect.value : (localStorage.getItem('icon_theme') || 'default');
+}
+
+// initialize theme dropdown and load theme from localstorage
+function initializeTheme() {
+  const storedTheme = localStorage.getItem('icon_theme') || 'default';
+  const themeSelect = document.getElementById('theme-select');
+  if (themeSelect) {
+    themeSelect.value = storedTheme;
+    themeSelect.addEventListener('change', function() {
+      localStorage.setItem('icon_theme', this.value);
+      updateAllIconSources();
+    });
+  }
+}
+
+// update all icon image paths on the page
+function updateAllIconSources() {
+  const theme = getTheme();
+  
+  // update instruction slot icons
+  document.querySelectorAll('.action-icon').forEach(img => {
+    const action = img.getAttribute('data-action') || 'empty';
+    img.src = `../res/${theme}/${action}.png`;
+  });
+  
+  // update popup icons
+  document.querySelectorAll('.popup-action-icon').forEach(img => {
+    const action = img.getAttribute('data-action') || 'empty';
+    img.src = `../res/${theme}/${action}.png`;
+  });
+  
+  // re-render bookmarks to update their preview icons
+  renderBookmarks();
+  
+  // re-calculate setup paths to update result icons
+  calculate();
+}
 
 
 
