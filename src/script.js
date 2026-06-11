@@ -196,7 +196,6 @@ function calculateSetupActions(targetValue, instructions) {
   const combinations = getHitCombinations(instructions);
   
   let bestCombination = null;
-  let bestSetupActions = null;
   let minSetupLength = Infinity;
   let bestVs = null;
 
@@ -241,7 +240,7 @@ function sortInstructions(instructions) {
   const notLast = instructions.filter(i => i.priority === 'not-last');
   const anyPriority = instructions.filter(i => i.priority === 'any');
 
-  let sortedInstructions = [...thirdLast, ...secondLast, ...notLast, ...last];
+  let sortedInstructions = [...thirdLast, ...notLast, ...secondLast, ...last];
 
   if (anyPriority.length > 0) {
     const anyHits = anyPriority.map(i => i);
@@ -314,7 +313,7 @@ function calculate() {
   }
 
   const instructions = [];
-  document.querySelectorAll("[class^='instruction-set']").forEach((set) => {
+  document.querySelectorAll(".instruction-set").forEach((set) => {
     const actionElement = set.querySelector(".action-icon");
     const action = actionElement.getAttribute("data-action");
     const priority = set.querySelector(".priority").value;
